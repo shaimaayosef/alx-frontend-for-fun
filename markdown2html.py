@@ -9,14 +9,17 @@ import re
 
 def markdown_to_html(md_filename, html_filename):
     """
-    Converts a Markdown file to an HTML file, including parsing of heading, unordered, and ordered list syntax.
+    Converts a Markdown file to an HTML file, including parsing of heading, unordered, ordered list syntax, and paragraphs.
 
     Args:
         md_filename (str): The name of the Markdown file.
         html_filename (str): The name of the output HTML file.
     """
     with open(md_filename, 'r') as md_file:
-        markdown_content = md_file.readlines()
+        markdown_content = md_file.read()
+
+    # Split content by two or more newlines to identify paragraphs and other blocks
+    blocks = re.split(r'\n\n+', markdown_content)
 
     html_content = []
     in_unordered_list = False  # Track whether we are currently processing an unordered list
@@ -29,52 +32,34 @@ def markdown_to_html(md_filename, html_filename):
     # Regular expression to match Markdown ordered list items
     ordered_list_item_regex = r'^\*\s+(.*)'
 
-    for line in markdown_content:
-        heading_match = re.match(heading_regex, line)
-        unordered_list_item_match = re.match(unordered_list_item_regex, line)
-        ordered_list_item_match = re.match(ordered_list_item_regex, line)
-
-        if heading_match:
-            if in_unordered_list:  # Close the unordered list before starting a new heading
-                html_content.append('</ul>\n')
-                in_unordered_list = False
-            if in_ordered_list:  # Close the ordered list before starting a new heading
-                html_content.append('</ol>\n')
-                in_ordered_list = False
-            level = len(heading_match.group(1))
-            content = heading_match.group(2)
+    for block in blocks:
+        block = block.strip()
+        if re.match(heading_regex, block):
+            level = len(re.match(heading_regex, block).group(1))
+            content = re.match(heading_regex, block).group(2)
             html_content.append(f'<h{level}>{content}</h{level}>\n')
-        elif unordered_list_item_match:
-            if in_ordered_list:  # Close the ordered list if starting an unordered list
-                html_content.append('</ol>\n')
-                in_ordered_list = False
-            if not in_unordered_list:  # Start a new unordered list if not already in one
+        elif re.match(unordered_list_item_regex, block):
+            if not in_unordered_list:
                 html_content.append('<ul>\n')
                 in_unordered_list = True
-            content = unordered_list_item_match.group(1)
-            html_content.append(f'    <li>{content}</li>\n')
-        elif ordered_list_item_match:
-            if in_unordered_list:  # Close the unordered list if starting an ordered list
-                html_content.append('</ul>\n')
-                in_unordered_list = False
-            if not in_ordered_list:  # Start a new ordered list if not already in one
+            for item in block.split('\n'):
+                content = re.match(unordered_list_item_regex, item).group(1)
+                html_content.append(f'    <li>{content}</li>\n')
+            html_content.append('</ul>\n')
+            in_unordered_list = False
+        elif re.match(ordered_list_item_regex, block):
+            if not in_ordered_list:
                 html_content.append('<ol>\n')
                 in_ordered_list = True
-            content = ordered_list_item_match.group(1)
-            html_content.append(f'    <li>{content}</li>\n')
-        else:
-            if in_unordered_list:  # Close the unordered list if the current line is not a list item
-                html_content.append('</ul>\n')
-                in_unordered_list = False
-            if in_ordered_list:  # Close the ordered list if the current line is not a list item
-                html_content.append('</ol>\n')
-                in_ordered_list = False
-            # For lines that do not match the heading or list syntax, just add them as is for now.
-
-    if in_unordered_list:  # Ensure the unordered list is closed if the file ends while still in a list
-        html_content.append('</ul>\n')
-    if in_ordered_list:  # Ensure the ordered list is closed if the file ends while still in a list
-        html_content.append('</ol>\n')
+            for item in block.split('\n'):
+                content = re.match(ordered_list_item_regex, item).group(1)
+                html_content.append(f'    <li>{content}</li>\n')
+            html_content.append('</ol>\n')
+            in_ordered_list = False
+        else:  # Treat as a paragraph
+            # Replace single newlines within a paragraph with <br />
+            paragraph = block.replace('\n', '<br />\n')
+            html_content.append(f'<p>\n    {paragraph}\n</p>\n')
 
     with open(html_filename, 'w') as html_file:
         html_file.writelines(html_content)
