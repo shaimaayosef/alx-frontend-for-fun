@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-This module contains a script to convert Markdown files to HTML.
+This module contains a script to convert Markdown files to HTML, including parsing of bold and italic syntax.
 """
 
 import sys
@@ -9,7 +9,7 @@ import re
 
 def markdown_to_html(md_filename, html_filename):
     """
-    Converts a Markdown file to an HTML file, including parsing of heading, unordered, ordered list syntax, and paragraphs.
+    Converts a Markdown file to an HTML file, including parsing of heading, unordered, ordered list syntax, paragraphs, bold, and italic text.
 
     Args:
         md_filename (str): The name of the Markdown file.
@@ -31,9 +31,16 @@ def markdown_to_html(md_filename, html_filename):
     unordered_list_item_regex = r'^\-\s+(.*)'
     # Regular expression to match Markdown ordered list items
     ordered_list_item_regex = r'^\*\s+(.*)'
+    # Regular expressions for bold and italic syntax
+    bold_regex = r'\*\*(.*?)\*\*'
+    italic_regex = r'__(.*?)__'
 
     for block in blocks:
         block = block.strip()
+        # Apply bold and italic transformations
+        block = re.sub(bold_regex, r'<b>\1</b>', block)
+        block = re.sub(italic_regex, r'<em>\1</em>', block)
+
         if re.match(heading_regex, block):
             level = len(re.match(heading_regex, block).group(1))
             content = re.match(heading_regex, block).group(2)
