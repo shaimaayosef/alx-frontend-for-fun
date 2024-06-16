@@ -1,50 +1,84 @@
 #!/usr/bin/python3
 """
-This module contains a script to convert Markdown files to HTML, including parsing of bold and italic syntax.
+This module contains a script to convert Markdown files to HTML.
 """
 
 import sys
 import os
 import re
-import hashlib
 
 def markdown_to_html(md_filename, html_filename):
+    """
+    Converts a Markdown file to an HTML file, including parsing of heading, unordered, ordered list syntax, and paragraphs.
+
+    Args:
+        md_filename (str): The name of the Markdown file.
+        html_filename (str): The name of the output HTML file.
+    """
     with open(md_filename, 'r') as md_file:
         markdown_content = md_file.read()
 
+    # Split content by two or more newlines to identify paragraphs and other blocks
     blocks = re.split(r'\n\n+', markdown_content)
 
     html_content = []
-    in_unordered_list = False
-    in_ordered_list = False
+    in_unordered_list = False  # Track whether we are currently processing an unordered list
+    in_ordered_list = False  # Track whether we are currently processing an ordered list
 
-    # Updated regular expressions
+    # Regular expression to match Markdown headings
     heading_regex = r'^(#{1,6})\s*(.*)'
+    # Regular expression to match Markdown unordered list items
     unordered_list_item_regex = r'^\-\s+(.*)'
+    # Regular expression to match Markdown ordered list items
     ordered_list_item_regex = r'^\*\s+(.*)'
-    bold_regex = r'\*\*(.*?)\*\*'
-    italic_regex = r'__(.*?)__'
-    md5_syntax_regex = r'\[\[(.*?)\]\]'  # New regex for MD5 conversion
-    remove_c_syntax_regex = r'\(\((.*?)\)\)'  # New regex for removing 'c's
 
     for block in blocks:
-        # Check for MD5 conversion syntax
-        if re.match(md5_syntax_regex, block):
-            content = re.findall(md5_syntax_regex, block)[0]
-            md5_hash = hashlib.md5(content.encode()).hexdigest()
-            html_content.append(md5_hash)
-            continue
+        block = block.strip()
+        if re.match(heading_regex, block):
+            level = len(re.match(heading_regex, block).group(1))
+            content = re.match(heading_regex, block).group(2)
+            html_content.append(f'<h{level}>{content}</h{level}>\n')
+        elif re.match(unordered_list_item_regex, block):
+            if not in_unordered_list:
+                html_content.append('<ul>\n')
+                in_unordered_list = True
+            for item in block.split('\n'):
+                content = re.match(unordered_list_item_regex, item).group(1)
+                html_content.append(f'    <li>{content}</li>\n')
+            html_content.append('</ul>\n')
+            in_unordered_list = False
+        elif re.match(ordered_list_item_regex, block):
+            if not in_ordered_list:
+                html_content.append('<ol>\n')
+                in_ordered_list = True
+            for item in block.split('\n'):
+                content = re.match(ordered_list_item_regex, item).group(1)
+                html_content.append(f'    <li>{content}</li>\n')
+            html_content.append('</ol>\n')
+            in_ordered_list = False
+        else:  # Treat as a paragraph
+            # Replace single newlines within a paragraph with <br />
+            paragraph = block.replace('\n', '<br />\n')
+            html_content.append(f'<p>\n    {paragraph}\n</p>\n')
 
-        # Check for removing 'c's syntax
-        if re.match(remove_c_syntax_regex, block):
-            content = re.findall(remove_c_syntax_regex, block)[0]
-            content_without_c = content.replace('c', '').replace('C', '')
-            html_content.append(content_without_c)
-            continue
-
-        # Existing parsing logic...
-
-    # Convert the list of HTML content blocks to a single string
-    final_html_content = '\n'.join(html_content)
     with open(html_filename, 'w') as html_file:
-        html_file.write(final_html_content)
+        html_file.writelines(html_content)
+
+if __name__ == "__main__":
+    # Check if the number of arguments is less than 2
+    if len(sys.argv) < 3:
+        print("Usage: ./markdown2html.py README.md README.html", file=sys.stderr)
+        sys.exit(1)
+
+    # Check if the Markdown file exists
+    md_filename = sys.argv[1]
+    if not os.path.exists(md_filename):
+        print(f"Missing {md_filename}", file=sys.stderr)
+        sys.exit(1)
+
+    # Call the conversion function
+    html_filename = sys.argv[2]
+    markdown_to_html(md_filename, html_filename)
+
+    # Exit successfully
+    sys.exit(0)
