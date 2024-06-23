@@ -1,0 +1,2 @@
+# flexbox
+Flexbox is a powerful CSS layout module that allows you to create flexible and responsive web designs. With flexbox, you can easily align and distribute elements within a container, making it ideal for building complex and dynamic layouts. It provides a set of properties that give you fine-grained control over how elements are positioned, sized, and ordered. Whether you need to create a simple navigation menu or a complex grid system, flexbox can help you achieve your desired layout with ease.
